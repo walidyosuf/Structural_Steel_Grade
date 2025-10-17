@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Specification Checker - Multi-Standard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --text-color: #333;
+            --bg-color: #f5f5f5;
+            --container-bg: #fff;
+            --border-color: #ddd;
+            --success-color: #d4edda;
+            --success-border: #c3e6cb;
+            --success-text: #155724;
+            --error-color: #f8d7da;
+            --error-border: #f5c6cb;
+            --error-text: #721c24;
+            --info-bg: #e7f3ff;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #4a9fe3;
+            --secondary-color: #2c80c5;
+            --text-color: #f0f0f0;
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --border-color: #444;
+            --success-color: #1e4620;
+            --success-border: #2d6a2d;
+            --success-text: #c8e6c9;
+            --error-color: #5a1a1a;
+            --error-border: #8b2a2a;
+            --error-text: #ffcdd2;
+            --info-bg: #1a3a5f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .lang-btn, .action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .lang-btn:hover, .action-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .action-btn.export {
+            background-color: #27ae60;
+        }
+
+        .action-btn.export:hover {
+            background-color: #219653;
+        }
+
+        .action-btn.standard {
+            background-color: #e67e22;
+        }
+
+        .action-btn.standard:hover {
+            background-color: #d35400;
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+        }
+
+        .test-fields {
+            background-color: var(--info-bg);
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .test-fields.active {
+            display: block;
+        }
+
+        .chemical-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .element-info {
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.pass {
+            background-color: var(--success-color);
+            border: 1px solid var(--success-border);
+            color: var(--success-text);
+        }
+
+        .result.fail {
+            background-color: var(--error-color);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
+        }
+
+        .result h3 {
+            margin-top: 0;
+        }
+
+        .reasons {
+            margin-top: 15px;
+        }
+
+        .reasons ul {
+            padding-left: 20px;
+        }
+
+        .info-note {
+            background-color: var(--info-bg);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: var(--container-bg);
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .modal-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            width: auto;
+            padding: 0;
+        }
+
+        .standard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .standard-table th, .standard-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .standard-table th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .standard-table tr:nth-child(even) {
+            background-color: var(--info-bg);
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            text-align: right;
+        }
+
+        [dir="rtl"] .reasons ul {
+            padding-left: 0;
+            padding-right: 20px;
+        }
+
+        [dir="rtl"] .slider:before {
+            left: auto;
+            right: 4px;
+        }
+
+        [dir="rtl"] input:checked + .slider:before {
+            transform: translateX(-30px);
+        }
+
+        [dir="rtl"] .standard-table th, [dir="rtl"] .standard-table td {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 id="app-title">Steel Specification Checker - Multi-Standard</h1>
+                <p id="app-description">Check steel specifications according to DIN 17100, EN 10025, ASTM, and JIS standards</p>
+            </div>
+            <div class="controls">
+                <div class="toggle-container">
+                    <span id="theme-label">Dark Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="lang-btn" id="lang-toggle">العربية</button>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="standardType" id="standard-type-label">Select Standard:</label>
+            <select id="standardType">
+                <option value="">-- Select Standard --</option>
+                <option value="din17100">DIN 17100</option>
+                <option value="en10025">EN 10025</option>
+                <option value="astm">ASTM</option>
+                <option value="jis">JIS</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="steelType" id="steel-type-label">Select Steel Type:</label>
+            <select id="steelType">
+                <option value="">-- Select Steel Type --</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="thickness" id="thickness-label">Select Product Thickness (mm):</label>
+            <select id="thickness">
+                <option value="">-- Select Thickness --</option>
+                <option value="16">Up to 16 mm</option>
+                <option value="16-32">16 to 32 mm</option>
+                <option value="32-40">32 to 40 mm</option>
+                <option value="40-63">40 to 63 mm</option>
+                <option value="63-100">63 to 100 mm</option>
+                <option value="100">Over 100 mm</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="testType" id="test-type-label">Select Test Type:</label>
+            <select id="testType">
+                <option value="">-- Select Test Type --</option>
+                <option value="mechanical">Mechanical Test</option>
+                <option value="chemical">Chemical Analysis (Sample)</option>
+            </select>
+        </div>
+        
+        <!-- Mechanical Test Fields -->
+        <div id="mechanicalFields" class="test-fields">
+            <h3 id="mechanical-title">Enter Mechanical Test Results:</h3>
+            <div class="form-group">
+                <label for="yieldStrength" id="yield-label">Yield Strength (N/mm²):</label>
+                <input type="number" id="yieldStrength" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="tensileStrength" id="tensile-label">Tensile Strength (N/mm²):</label>
+                <input type="number" id="tensileStrength" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="elongation" id="elongation-label">Elongation (%):</label>
+                <input type="number" id="elongation" step="0.1">
+            </div>
+        </div>
+        
+        <!-- Chemical Analysis Fields -->
+        <div id="chemicalFields" class="test-fields">
+            <h3 id="chemical-title">Enter Chemical Analysis Results (Sample Analysis - %):</h3>
+            <div class="chemical-grid">
+                <div class="form-group">
+                    <label for="carbon">Carbon (C):</label>
+                    <input type="number" id="carbon" step="0.001" min="0" max="1">
+                    <div class="element-info" id="carbon-info">Increases strength and hardness, reduces ductility and weldability</div>
+                </div>
+                <div class="form-group">
+                    <label for="silicon">Silicon (Si):</label>
+                    <input type="number" id="silicon" step="0.01" min="0" max="2">
+                    <div class="element-info" id="silicon-info">Increases strength and hardness, improves oxidation resistance</div>
+                </div>
+                <div class="form-group">
+                    <label for="manganese">Manganese (Mn):</label>
+                    <input type="number" id="manganese" step="0.01" min="0" max="2">
+                    <div class="element-info" id="manganese-info">Increases strength and hardness, improves hardenability</div>
+                </div>
+                <div class="form-group">
+                    <label for="phosphorus">Phosphorus (P):</label>
+                    <input type="number" id="phosphorus" step="0.001" min="0" max="0.1">
+                    <div class="element-info" id="phosphorus-info">Increases strength but reduces ductility and impact toughness</div>
+                </div>
+                <div class="form-group">
+                    <label for="sulfur">Sulfur (S):</label>
+                    <input type="number" id="sulfur" step="0.001" min="0" max="0.1">
+                    <div class="element-info" id="sulfur-info">Reduces ductility and weldability, improves machinability</div>
+                </div>
+                <div class="form-group">
+                    <label for="nitrogen">Nitrogen (N):</label>
+                    <input type="number" id="nitrogen" step="0.0001" min="0" max="0.02">
+                    <div class="element-info" id="nitrogen-info">Increases strength but reduces ductility, can cause aging</div>
+                </div>
+                <div class="form-group">
+                    <label for="aluminum">Aluminum (Al):</label>
+                    <input type="number" id="aluminum" step="0.001" min="0" max="0.1">
+                    <div class="element-info" id="aluminum-info">Deoxidizer, refines grain size, improves toughness</div>
+                </div>
+                <div class="form-group">
+                    <label for="chromium">Chromium (Cr):</label>
+                    <input type="number" id="chromium" step="0.01" min="0" max="1">
+                    <div class="element-info" id="chromium-info">Improves corrosion resistance and hardenability</div>
+                </div>
+                <div class="form-group">
+                    <label for="nickel">Nickel (Ni):</label>
+                    <input type="number" id="nickel" step="0.01" min="0" max="1">
+                    <div class="element-info" id="nickel-info">Increases toughness and corrosion resistance</div>
+                </div>
+                <div class="form-group">
+                    <label for="copper">Copper (Cu):</label>
+                    <input type="number" id="copper" step="0.01" min="0" max="0.5">
+                    <div class="element-info" id="copper-info">Improves corrosion resistance, can cause hot shortness</div>
+                </div>
+            </div>
+        </div>
+        
+        <button id="checkBtn">Check Compliance</button>
+        
+        <div class="buttons-container">
+            <button class="action-btn standard" id="showStandardBtn">Show Standard</button>
+            <button class="action-btn export" id="exportBtn">Export to Excel</button>
+        </div>
+        
+        <div id="result" class="result"></div>
+        
+        <div class="info-note">
+            <strong id="note-title">Note:</strong> <span id="note-text">This application supports multiple steel standards. Entered values are compared with standard requirements for the selected standard and steel type.</span>
+        </div>
+    </div>
+
+    <!-- Modal for displaying standard -->
+    <div id="standardModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Standard Specifications</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div id="modal-content">
+                <!-- Content will be filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Language data
+        const translations = {
+            en: {
+                appTitle: "Steel Specification Checker - Multi-Standard",
+                appDescription: "Check steel specifications according to DIN 17100, EN 10025, ASTM, and JIS standards",
+                themeLabel: "Dark Mode",
+                langToggle: "العربية",
+                standardTypeLabel: "Select Standard:",
+                steelTypeLabel: "Select Steel Type:",
+                thicknessLabel: "Select Product Thickness (mm):",
+                testTypeLabel: "Select Test Type:",
+                mechanicalTitle: "Enter Mechanical Test Results:",
+                yieldLabel: "Yield Strength (N/mm²):",
+                tensileLabel: "Tensile Strength (N/mm²):",
+                elongationLabel: "Elongation (%):",
+                chemicalTitle: "Enter Chemical Analysis Results (Sample Analysis - %):",
+                checkBtn: "Check Compliance",
+                showStandardBtn: "Show Standard",
+                exportBtn: "Export to Excel",
+                noteTitle: "Note:",
+                noteText: "This application supports multiple steel standards. Entered values are compared with standard requirements for the selected standard and steel type.",
+                passTitle: "✓ Steel Complies with Specifications",
+                passText: "All entered values comply with standard requirements for the selected steel type.",
+                failTitle: "✗ Steel Does Not Comply with Specifications",
+                failText: "Some entered values do not comply with standard requirements for the selected steel type.",
+                reasonsTitle: "Reasons:",
+                selectStandard: "-- Select Standard --",
+                selectSteelType: "-- Select Steel Type --",
+                selectThickness: "-- Select Thickness --",
+                selectTestType: "-- Select Test Type --",
+                standardOptions: {
+                    din17100: "DIN 17100",
+                    en10025: "EN 10025",
+                    astm: "ASTM",
+                    jis: "JIS"
+                },
+                steelOptions: {
+                    din17100: {
+                        st37: "ST37",
+                        st44: "ST44",
+                        st52: "ST52"
+                    },
+                    en10025: {
+                        s235jr: "S235JR",
+                        s275jr: "S275JR",
+                        s355jr: "S355JR"
+                    },
+                    astm: {
+                        a36: "A36",
+                        a572: "A572 Grade 50"
+                    },
+                    jis: {
+                        ss400: "SS400",
+                        ss540: "SS540"
+                    }
+                },
+                thicknessOptions: {
+                    "16": "Up to 16 mm",
+                    "16-32": "16 to 32 mm",
+                    "32-40": "32 to 40 mm",
+                    "40-63": "40 to 63 mm",
+                    "63-100": "63 to 100 mm",
+                    "100": "Over 100 mm"
+                },
+                testOptions: {
+                    mechanical: "Mechanical Test",
+                    chemical: "Chemical Analysis (Sample)"
+                },
+                elementInfo: {
+                    carbon: "Increases strength and hardness, reduces ductility and weldability",
+                    silicon: "Increases strength and hardness, improves oxidation resistance",
+                    manganese: "Increases strength and hardness, improves hardenability",
+                    phosphorus: "Increases strength but reduces ductility and impact toughness",
+                    sulfur: "Reduces ductility and weldability, improves machinability",
+                    nitrogen: "Increases strength but reduces ductility, can cause aging",
+                    aluminum: "Deoxidizer, refines grain size, improves toughness",
+                    chromium: "Improves corrosion resistance and hardenability",
+                    nickel: "Increases toughness and corrosion resistance",
+                    copper: "Improves corrosion resistance, can cause hot shortness"
+                },
+                modalTitle: "Standard Specifications",
+                mechanicalProperties: "Mechanical Properties",
+                chemicalComposition: "Chemical Composition (Sample Analysis)",
+                steelGrade: "Steel Grade",
+                yieldStrength: "Yield Strength (N/mm²)",
+                tensileStrength: "Tensile Strength (N/mm²)",
+                elongation: "Elongation (%)",
+                element: "Element",
+                maxValue: "Max Value (%)"
+            },
+            ar: {
+                appTitle: "مدقق مواصفات الصلب - متعدد المعايير",
+                appDescription: "التحقق من مواصفات الصلب وفقًا لمعايير DIN 17100 وEN 10025 وASTM وJIS",
+                themeLabel: "الوضع الليلي",
+                langToggle: "English",
+                standardTypeLabel: "اختر المعيار:",
+                steelTypeLabel: "اختر نوع الصلب:",
+                thicknessLabel: "اختر سماكة المنتج (مم):",
+                testTypeLabel: "اختر نوع الاختبار:",
+                mechanicalTitle: "أدخل نتائج الاختبار الميكانيكي:",
+                yieldLabel: "قوة الخضوع (N/mm²):",
+                tensileLabel: "قوة الشد (N/mm²):",
+                elongationLabel: "الاستطالة (%):",
+                chemicalTitle: "أدخل نتائج التحليل الكيميائي (تحليل العينة - %):",
+                checkBtn: "تحقق من المطابقة",
+                showStandardBtn: "عرض القياسي",
+                exportBtn: "تصدير إلى Excel",
+                noteTitle: "ملاحظة:",
+                noteText: "هذا التطبيق يدعم معايير الصلب المتعددة. يتم مقارنة القيم المدخلة مع المتطلبات القياسية للمعيار ونوع الصلب المختار.",
+                passTitle: "✓ الصلب مطابق للمواصفات",
+                passText: "جميع القيم المدخلة تتوافق مع المتطلبات القياسية لنوع الصلب المختار.",
+                failTitle: "✗ الصلب غير مطابق للمواصفات",
+                failText: "بعض القيم المدخلة لا تتوافق مع المتطلبات القياسية لنوع الصلب المختار.",
+                reasonsTitle: "الأسباب:",
+                selectStandard: "-- اختر المعيار --",
+                selectSteelType: "-- اختر نوع الصلب --",
+                selectThickness: "-- اختر السماكة --",
+                selectTestType: "-- اختر نوع الاختبار --",
+                standardOptions: {
+                    din17100: "DIN 17100",
+                    en10025: "EN 10025",
+                    astm: "ASTM",
+                    jis: "JIS"
+                },
+                steelOptions: {
+                    din17100: {
+                        st37: "ST37",
+                        st44: "ST44",
+                        st52: "ST52"
+                    },
+                    en10025: {
+                        s235jr: "S235JR",
+                        s275jr: "S275JR",
+                        s355jr: "S355JR"
+                    },
+                    astm: {
+                        a36: "A36",
+                        a572: "A572 Grade 50"
+                    },
+                    jis: {
+                        ss400: "SS400",
+                        ss540: "SS540"
+                    }
+                },
+                thicknessOptions: {
+                    "16": "حتى 16 مم",
+                    "16-32": "16 إلى 32 مم",
+                    "32-40": "32 إلى 40 مم",
+                    "40-63": "40 إلى 63 مم",
+                    "63-100": "63 إلى 100 مم",
+                    "100": "أكثر من 100 مم"
+                },
+                testOptions: {
+                    mechanical: "الاختبار الميكانيكي",
+                    chemical: "التحليل الكيميائي (العينة)"
+                },
+                elementInfo: {
+                    carbon: "يزيد القوة والصلابة، يقلل المرونة وقابلية اللحام",
+                    silicon: "يزيد القوة والصلابة، يحسن مقاومة الأكسدة",
+                    manganese: "يزيد القوة والصلابة، يحسن القابلية للتصلب",
+                    phosphorus: "يزيد القوة لكن يقلل المرونة ومقاومة الصدمات",
+                    sulfur: "يقلل المرونة وقابلية اللحام، يحسن القابلية للتشغيل",
+                    nitrogen: "يزيد القوة لكن يقلل المرونة، قد يسبب التقادم",
+                    aluminum: "مزيل للأكسدة، يحسن حجم الحبيبات والمتانة",
+                    chromium: "يحسن مقاومة التآكل والقابلية للتصلب",
+                    nickel: "يزيد المتانة ومقاومة التآكل",
+                    copper: "يحسن مقاومة التآكل، قد يسبب الهشاشة الساخنة"
+                },
+                modalTitle: "المواصفات القياسية",
+                mechanicalProperties: "الخصائص الميكانيكية",
+                chemicalComposition: "التركيب الكيميائي (تحليل العينة)",
+                steelGrade: "نوع الصلب",
+                yieldStrength: "قوة الخضوع (N/mm²)",
+                tensileStrength: "قوة الشد (N/mm²)",
+                elongation: "الاستطالة (%)",
+                element: "العنصر",
+                maxValue: "أقصى قيمة (%)"
+            }
+        };
+
+        // Steel standards data for multiple standards
+        const standards = {
+            "din17100": {
+                "st37": {
+                    mechanical: {
+                        yieldStrength: { min: 235 },
+                        tensileStrength: { min: 360, max: 510 },
+                        elongation: { min: 26 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.21 },
+                        silicon: { max: 0.60 },
+                        manganese: { max: 1.70 },
+                        phosphorus: { max: 0.065 },
+                        sulfur: { max: 0.065 },
+                        nitrogen: { max: 0.010 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                },
+                "st44": {
+                    mechanical: {
+                        yieldStrength: { min: 275 },
+                        tensileStrength: { min: 430, max: 580 },
+                        elongation: { min: 22 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.24 },
+                        silicon: { max: 0.60 },
+                        manganese: { max: 1.70 },
+                        phosphorus: { max: 0.060 },
+                        sulfur: { max: 0.060 },
+                        nitrogen: { max: 0.010 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                },
+                "st52": {
+                    mechanical: {
+                        yieldStrength: { min: 355 },
+                        tensileStrength: { min: 490, max: 660 },
+                        elongation: { min: 22 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.22 },
+                        silicon: { max: 0.60 },
+                        manganese: { max: 1.70 },
+                        phosphorus: { max: 0.050 },
+                        sulfur: { max: 0.060 },
+                        nitrogen: { max: 0.009 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                }
+            },
+            "en10025": {
+                "s235jr": {
+                    mechanical: {
+                        yieldStrength: { min: 235 },
+                        tensileStrength: { min: 360, max: 510 },
+                        elongation: { min: 26 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.17 },
+                        silicon: { max: 0.55 },
+                        manganese: { max: 1.40 },
+                        phosphorus: { max: 0.045 },
+                        sulfur: { max: 0.045 },
+                        nitrogen: { max: 0.014 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                },
+                "s275jr": {
+                    mechanical: {
+                        yieldStrength: { min: 275 },
+                        tensileStrength: { min: 430, max: 580 },
+                        elongation: { min: 22 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.21 },
+                        silicon: { max: 0.55 },
+                        manganese: { max: 1.50 },
+                        phosphorus: { max: 0.045 },
+                        sulfur: { max: 0.045 },
+                        nitrogen: { max: 0.014 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                },
+                "s355jr": {
+                    mechanical: {
+                        yieldStrength: { min: 355 },
+                        tensileStrength: { min: 490, max: 630 },
+                        elongation: { min: 22 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.24 },
+                        silicon: { max: 0.55 },
+                        manganese: { max: 1.60 },
+                        phosphorus: { max: 0.045 },
+                        sulfur: { max: 0.045 },
+                        nitrogen: { max: 0.014 },
+                        aluminum: { max: 0.020 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                }
+            },
+            "astm": {
+                "a36": {
+                    mechanical: {
+                        yieldStrength: { min: 250 },
+                        tensileStrength: { min: 400, max: 550 },
+                        elongation: { min: 20 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.26 },
+                        silicon: { max: 0.40 },
+                        manganese: { max: 0.80 },
+                        phosphorus: { max: 0.04 },
+                        sulfur: { max: 0.05 },
+                        nitrogen: { max: 0.01 },
+                        aluminum: { max: 0.02 },
+                        chromium: { max: 0.20 },
+                        nickel: { max: 0.20 },
+                        copper: { max: 0.20 }
+                    }
+                },
+                "a572": {
+                    mechanical: {
+                        yieldStrength: { min: 345 },
+                        tensileStrength: { min: 450, max: 620 },
+                        elongation: { min: 18 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.23 },
+                        silicon: { max: 0.40 },
+                        manganese: { max: 1.35 },
+                        phosphorus: { max: 0.04 },
+                        sulfur: { max: 0.05 },
+                        nitrogen: { max: 0.01 },
+                        aluminum: { max: 0.02 },
+                        chromium: { max: 0.20 },
+                        nickel: { max: 0.20 },
+                        copper: { max: 0.20 }
+                    }
+                }
+            },
+            "jis": {
+                "ss400": {
+                    mechanical: {
+                        yieldStrength: { min: 245 },
+                        tensileStrength: { min: 400, max: 510 },
+                        elongation: { min: 17 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.30 },
+                        silicon: { max: 0.35 },
+                        manganese: { max: 1.20 },
+                        phosphorus: { max: 0.05 },
+                        sulfur: { max: 0.05 },
+                        nitrogen: { max: 0.01 },
+                        aluminum: { max: 0.02 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                },
+                "ss540": {
+                    mechanical: {
+                        yieldStrength: { min: 355 },
+                        tensileStrength: { min: 540, max: 690 },
+                        elongation: { min: 16 }
+                    },
+                    chemical: {
+                        carbon: { max: 0.30 },
+                        silicon: { max: 0.55 },
+                        manganese: { max: 1.60 },
+                        phosphorus: { max: 0.04 },
+                        sulfur: { max: 0.04 },
+                        nitrogen: { max: 0.01 },
+                        aluminum: { max: 0.02 },
+                        chromium: { max: 0.30 },
+                        nickel: { max: 0.30 },
+                        copper: { max: 0.30 }
+                    }
+                }
+            }
+        };
+
+        // DOM elements
+        const themeToggle = document.getElementById('theme-toggle');
+        const langToggle = document.getElementById('lang-toggle');
+        const standardTypeSelect = document.getElementById('standardType');
+        const steelTypeSelect = document.getElementById('steelType');
+        const thicknessSelect = document.getElementById('thickness');
+        const testTypeSelect = document.getElementById('testType');
+        const mechanicalFields = document.getElementById('mechanicalFields');
+        const chemicalFields = document.getElementById('chemicalFields');
+        const checkBtn = document.getElementById('checkBtn');
+        const showStandardBtn = document.getElementById('showStandardBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const resultDiv = document.getElementById('result');
+        const standardModal = document.getElementById('standardModal');
+        const closeModal = document.getElementById('closeModal');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+
+        // Current language
+        let currentLang = 'en';
+
+        // Initialize the application
+        function initApp() {
+            // Set up event listeners
+            themeToggle.addEventListener('change', toggleTheme);
+            langToggle.addEventListener('click', toggleLanguage);
+            standardTypeSelect.addEventListener('change', updateSteelOptions);
+            testTypeSelect.addEventListener('change', toggleTestFields);
+            checkBtn.addEventListener('click', checkCompliance);
+            showStandardBtn.addEventListener('click', showStandard);
+            exportBtn.addEventListener('click', exportToExcel);
+            closeModal.addEventListener('click', () => {
+                standardModal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (event) => {
+                if (event.target === standardModal) {
+                    standardModal.style.display = 'none';
+                }
+            });
+            
+            // Set default language
+            updateLanguage('en');
+            
+            // Set up standard options
+            updateStandardOptions();
+            
+            // Set up thickness options
+            updateThicknessOptions();
+            
+            // Set up test type options
+            updateTestOptions();
+        }
+
+        // Toggle between light and dark theme
+        function toggleTheme() {
+            if (themeToggle.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
+        }
+
+        // Toggle between English and Arabic
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            updateLanguage(currentLang);
+        }
+
+        // Update all text content based on selected language
+        function updateLanguage(lang) {
+            const t = translations[lang];
+            
+            // Update text content
+            document.getElementById('app-title').textContent = t.appTitle;
+            document.getElementById('app-description').textContent = t.appDescription;
+            document.getElementById('theme-label').textContent = t.themeLabel;
+            document.getElementById('lang-toggle').textContent = t.langToggle;
+            document.getElementById('standard-type-label').textContent = t.standardTypeLabel;
+            document.getElementById('steel-type-label').textContent = t.steelTypeLabel;
+            document.getElementById('thickness-label').textContent = t.thicknessLabel;
+            document.getElementById('test-type-label').textContent = t.testTypeLabel;
+            document.getElementById('mechanical-title').textContent = t.mechanicalTitle;
+            document.getElementById('yield-label').textContent = t.yieldLabel;
+            document.getElementById('tensile-label').textContent = t.tensileLabel;
+            document.getElementById('elongation-label').textContent = t.elongationLabel;
+            document.getElementById('chemical-title').textContent = t.chemicalTitle;
+            document.getElementById('checkBtn').textContent = t.checkBtn;
+            document.getElementById('showStandardBtn').textContent = t.showStandardBtn;
+            document.getElementById('exportBtn').textContent = t.exportBtn;
+            document.getElementById('note-title').textContent = t.noteTitle;
+            document.getElementById('note-text').textContent = t.noteText;
+            document.getElementById('modal-title').textContent = t.modalTitle;
+            
+            // Update element info
+            document.getElementById('carbon-info').textContent = t.elementInfo.carbon;
+            document.getElementById('silicon-info').textContent = t.elementInfo.silicon;
+            document.getElementById('manganese-info').textContent = t.elementInfo.manganese;
+            document.getElementById('phosphorus-info').textContent = t.elementInfo.phosphorus;
+            document.getElementById('sulfur-info').textContent = t.elementInfo.sulfur;
+            document.getElementById('nitrogen-info').textContent = t.elementInfo.nitrogen;
+            document.getElementById('aluminum-info').textContent = t.elementInfo.aluminum;
+            document.getElementById('chromium-info').textContent = t.elementInfo.chromium;
+            document.getElementById('nickel-info').textContent = t.elementInfo.nickel;
+            document.getElementById('copper-info').textContent = t.elementInfo.copper;
+            
+            // Update select options
+            updateStandardOptions();
+            updateSteelOptions();
+            updateThicknessOptions();
+            updateTestOptions();
+            
+            // Update direction
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        }
+
+        // Update standard options based on current language
+        function updateStandardOptions() {
+            const t = translations[currentLang];
+            standardTypeSelect.innerHTML = `<option value="">${t.selectStandard}</option>`;
+            
+            for (const [value, label] of Object.entries(t.standardOptions)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                standardTypeSelect.appendChild(option);
+            }
+        }
+
+        // Update steel type options based on selected standard
+        function updateSteelOptions() {
+            const standardType = standardTypeSelect.value;
+            const t = translations[currentLang];
+            
+            steelTypeSelect.innerHTML = `<option value="">${t.selectSteelType}</option>`;
+            
+            if (standardType && t.steelOptions[standardType]) {
+                for (const [value, label] of Object.entries(t.steelOptions[standardType])) {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    steelTypeSelect.appendChild(option);
+                }
+            }
+        }
+
+        // Update thickness options based on current language
+        function updateThicknessOptions() {
+            const t = translations[currentLang];
+            thicknessSelect.innerHTML = `<option value="">${t.selectThickness}</option>`;
+            
+            for (const [value, label] of Object.entries(t.thicknessOptions)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                thicknessSelect.appendChild(option);
+            }
+        }
+
+        // Update test type options based on current language
+        function updateTestOptions() {
+            const t = translations[currentLang];
+            testTypeSelect.innerHTML = `<option value="">${t.selectTestType}</option>`;
+            
+            for (const [value, label] of Object.entries(t.testOptions)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                testTypeSelect.appendChild(option);
+            }
+        }
+
+        // Show/hide test fields based on selected test type
+        function toggleTestFields() {
+            mechanicalFields.classList.remove('active');
+            chemicalFields.classList.remove('active');
+            
+            if (testTypeSelect.value === 'mechanical') {
+                mechanicalFields.classList.add('active');
+            } else if (testTypeSelect.value === 'chemical') {
+                chemicalFields.classList.add('active');
+            }
+        }
+
+        // Check compliance with standards
+        function checkCompliance() {
+            const standardType = standardTypeSelect.value;
+            const steelType = steelTypeSelect.value;
+            const thickness = thicknessSelect.value;
+            const testType = testTypeSelect.value;
+            const t = translations[currentLang];
+            
+            if (!standardType || !steelType || !thickness || !testType) {
+                alert(currentLang === 'en' 
+                    ? 'Please select standard, steel type, thickness, and test type' 
+                    : 'يرجى اختيار المعيار، نوع الصلب، السماكة، ونوع الاختبار');
+                return;
+            }
+            
+            const standard = standards[standardType][steelType];
+            let isCompliant = true;
+            let reasons = [];
+            
+            if (testType === 'mechanical') {
+                // Check mechanical test
+                const yieldStrength = parseFloat(document.getElementById('yieldStrength').value);
+                const tensileStrength = parseFloat(document.getElementById('tensileStrength').value);
+                const elongation = parseFloat(document.getElementById('elongation').value);
+                
+                if (isNaN(yieldStrength) || isNaN(tensileStrength) || isNaN(elongation)) {
+                    alert(currentLang === 'en' 
+                        ? 'Please enter all mechanical test values' 
+                        : 'يرجى إدخال جميع قيم الاختبار الميكانيكي');
+                    return;
+                }
+                
+                // Check yield strength
+                if (yieldStrength < standard.mechanical.yieldStrength.min) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Yield strength (${yieldStrength} N/mm²) is below the required minimum (${standard.mechanical.yieldStrength.min} N/mm²)` 
+                        : `قوة الخضوع (${yieldStrength} N/mm²) أقل من الحد الأدنى المطلوب (${standard.mechanical.yieldStrength.min} N/mm²)`);
+                }
+                
+                // Check tensile strength
+                if (tensileStrength < standard.mechanical.tensileStrength.min || 
+                    tensileStrength > standard.mechanical.tensileStrength.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Tensile strength (${tensileStrength} N/mm²) is outside the allowed range (${standard.mechanical.tensileStrength.min}-${standard.mechanical.tensileStrength.max} N/mm²)` 
+                        : `قوة الشد (${tensileStrength} N/mm²) خارج النطاق المسموح به (${standard.mechanical.tensileStrength.min}-${standard.mechanical.tensileStrength.max} N/mm²)`);
+                }
+                
+                // Check elongation
+                if (elongation < standard.mechanical.elongation.min) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Elongation (${elongation}%) is below the required minimum (${standard.mechanical.elongation.min}%)` 
+                        : `الاستطالة (${elongation}%) أقل من الحد الأدنى المطلوب (${standard.mechanical.elongation.min}%)`);
+                }
+                
+            } else if (testType === 'chemical') {
+                // Check chemical analysis
+                const carbon = parseFloat(document.getElementById('carbon').value);
+                const silicon = parseFloat(document.getElementById('silicon').value);
+                const manganese = parseFloat(document.getElementById('manganese').value);
+                const phosphorus = parseFloat(document.getElementById('phosphorus').value);
+                const sulfur = parseFloat(document.getElementById('sulfur').value);
+                const nitrogen = parseFloat(document.getElementById('nitrogen').value);
+                const aluminum = parseFloat(document.getElementById('aluminum').value);
+                const chromium = parseFloat(document.getElementById('chromium').value);
+                const nickel = parseFloat(document.getElementById('nickel').value);
+                const copper = parseFloat(document.getElementById('copper').value);
+                
+                if (isNaN(carbon) || isNaN(phosphorus) || isNaN(sulfur)) {
+                    alert(currentLang === 'en' 
+                        ? 'Please enter all basic chemical analysis values (Carbon, Phosphorus, Sulfur)' 
+                        : 'يرجى إدخال جميع قيم التحليل الكيميائي الأساسية (الكربون، الفوسفور، الكبريت)');
+                    return;
+                }
+                
+                // Check carbon
+                if (carbon > standard.chemical.carbon.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Carbon content (${carbon}%) exceeds the maximum allowed for sample analysis (${standard.chemical.carbon.max}%)` 
+                        : `نسبة الكربون (${carbon}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.carbon.max}%)`);
+                }
+                
+                // Check silicon
+                if (!isNaN(silicon) && silicon > standard.chemical.silicon.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Silicon content (${silicon}%) exceeds the maximum allowed for sample analysis (${standard.chemical.silicon.max}%)` 
+                        : `نسبة السيليكون (${silicon}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.silicon.max}%)`);
+                }
+                
+                // Check manganese
+                if (!isNaN(manganese) && manganese > standard.chemical.manganese.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Manganese content (${manganese}%) exceeds the maximum allowed for sample analysis (${standard.chemical.manganese.max}%)` 
+                        : `نسبة المنغنيز (${manganese}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.manganese.max}%)`);
+                }
+                
+                // Check phosphorus
+                if (phosphorus > standard.chemical.phosphorus.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Phosphorus content (${phosphorus}%) exceeds the maximum allowed for sample analysis (${standard.chemical.phosphorus.max}%)` 
+                        : `نسبة الفوسفور (${phosphorus}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.phosphorus.max}%)`);
+                }
+                
+                // Check sulfur
+                if (sulfur > standard.chemical.sulfur.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Sulfur content (${sulfur}%) exceeds the maximum allowed for sample analysis (${standard.chemical.sulfur.max}%)` 
+                        : `نسبة الكبريت (${sulfur}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.sulfur.max}%)`);
+                }
+                
+                // Check nitrogen
+                if (!isNaN(nitrogen) && nitrogen > standard.chemical.nitrogen.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Nitrogen content (${nitrogen}%) exceeds the maximum allowed for sample analysis (${standard.chemical.nitrogen.max}%)` 
+                        : `نسبة النيتروجين (${nitrogen}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.nitrogen.max}%)`);
+                }
+                
+                // Check aluminum
+                if (!isNaN(aluminum) && aluminum > standard.chemical.aluminum.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Aluminum content (${aluminum}%) exceeds the maximum allowed for sample analysis (${standard.chemical.aluminum.max}%)` 
+                        : `نسبة الألمنيوم (${aluminum}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.aluminum.max}%)`);
+                }
+                
+                // Check chromium
+                if (!isNaN(chromium) && chromium > standard.chemical.chromium.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Chromium content (${chromium}%) exceeds the maximum allowed for sample analysis (${standard.chemical.chromium.max}%)` 
+                        : `نسبة الكروم (${chromium}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.chromium.max}%)`);
+                }
+                
+                // Check nickel
+                if (!isNaN(nickel) && nickel > standard.chemical.nickel.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Nickel content (${nickel}%) exceeds the maximum allowed for sample analysis (${standard.chemical.nickel.max}%)` 
+                        : `نسبة النيكل (${nickel}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.nickel.max}%)`);
+                }
+                
+                // Check copper
+                if (!isNaN(copper) && copper > standard.chemical.copper.max) {
+                    isCompliant = false;
+                    reasons.push(currentLang === 'en' 
+                        ? `Copper content (${copper}%) exceeds the maximum allowed for sample analysis (${standard.chemical.copper.max}%)` 
+                        : `نسبة النحاس (${copper}%) أعلى من الحد المسموح به لتحليل العينة (${standard.chemical.copper.max}%)`);
+                }
+            }
+            
+            // Display result
+            displayResult(isCompliant, reasons);
+        }
+
+        // Display the compliance result
+        function displayResult(isCompliant, reasons) {
+            const t = translations[currentLang];
+            resultDiv.className = 'result ' + (isCompliant ? 'pass' : 'fail');
+            
+            if (isCompliant) {
+                resultDiv.innerHTML = `
+                    <h3>${t.passTitle}</h3>
+                    <p>${t.passText}</p>
+                `;
+            } else {
+                let reasonsHtml = `<div class="reasons"><h4>${t.reasonsTitle}</h4><ul>`;
+                reasons.forEach(reason => {
+                    reasonsHtml += `<li>${reason}</li>`;
+                });
+                reasonsHtml += '</ul></div>';
+                
+                resultDiv.innerHTML = `
+                    <h3>${t.failTitle}</h3>
+                    <p>${t.failText}</p>
+                    ${reasonsHtml}
+                `;
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+
+        // Show standard specifications in modal
+        function showStandard() {
+            const standardType = standardTypeSelect.value;
+            const t = translations[currentLang];
+            
+            if (!standardType) {
+                alert(currentLang === 'en' 
+                    ? 'Please select a standard first' 
+                    : 'يرجى اختيار معيار أولاً');
+                return;
+            }
+            
+            const standardData = standards[standardType];
+            let content = `
+                <h3>${t.mechanicalProperties}</h3>
+                <table class="standard-table">
+                    <thead>
+                        <tr>
+                            <th>${t.steelGrade}</th>
+                            <th>${t.yieldStrength}</th>
+                            <th>${t.tensileStrength}</th>
+                            <th>${t.elongation}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            for (const [steelType, data] of Object.entries(standardData)) {
+                content += `
+                    <tr>
+                        <td>${t.steelOptions[standardType][steelType]}</td>
+                        <td>≥ ${data.mechanical.yieldStrength.min} N/mm²</td>
+                        <td>${data.mechanical.tensileStrength.min} - ${data.mechanical.tensileStrength.max} N/mm²</td>
+                        <td>≥ ${data.mechanical.elongation.min}%</td>
+                    </tr>
+                `;
+            }
+            
+            content += `
+                    </tbody>
+                </table>
+                
+                <h3 style="margin-top: 30px;">${t.chemicalComposition}</h3>
+                <table class="standard-table">
+                    <thead>
+                        <tr>
+                            <th>${t.element}</th>
+            `;
+            
+            // Add columns for each steel type
+            for (const steelType of Object.keys(standardData)) {
+                content += `<th>${t.steelOptions[standardType][steelType]} ${t.maxValue}</th>`;
+            }
+            
+            content += `
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Add rows for each element
+            const elements = [
+                { id: 'carbon', name: 'Carbon (C)' },
+                { id: 'silicon', name: 'Silicon (Si)' },
+                { id: 'manganese', name: 'Manganese (Mn)' },
+                { id: 'phosphorus', name: 'Phosphorus (P)' },
+                { id: 'sulfur', name: 'Sulfur (S)' },
+                { id: 'nitrogen', name: 'Nitrogen (N)' },
+                { id: 'aluminum', name: 'Aluminum (Al)' },
+                { id: 'chromium', name: 'Chromium (Cr)' },
+                { id: 'nickel', name: 'Nickel (Ni)' },
+                { id: 'copper', name: 'Copper (Cu)' }
+            ];
+            
+            elements.forEach(element => {
+                content += `<tr><td>${element.name}</td>`;
+                
+                for (const steelType of Object.keys(standardData)) {
+                    content += `<td>${standardData[steelType].chemical[element.id].max}%</td>`;
+                }
+                
+                content += `</tr>`;
+            });
+            
+            content += `
+                    </tbody>
+                </table>
+            `;
+            
+            modalContent.innerHTML = content;
+            standardModal.style.display = 'block';
+        }
+
+        // Export results to Excel with table formatting
+        function exportToExcel() {
+            const standardType = standardTypeSelect.value;
+            const steelType = steelTypeSelect.value;
+            const testType = testTypeSelect.value;
+            const t = translations[currentLang];
+            
+            if (!standardType || !steelType || !testType) {
+                alert(currentLang === 'en' 
+                    ? 'Please select standard, steel type and test type before exporting' 
+                    : 'يرجى اختيار المعيار ونوع الصلب ونوع الاختبار قبل التصدير');
+                return;
+            }
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Prepare data for Excel
+            let data = [];
+            let fileName = `Steel_Analysis_${standardType.toUpperCase()}_${steelType.toUpperCase()}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            
+            // Add header
+            data.push([`Steel Analysis Report - ${t.standardOptions[standardType]} - ${t.steelOptions[standardType][steelType]}`]);
+            data.push([`Generated on: ${new Date().toLocaleString()}`]);
+            data.push([`Standard: ${t.standardOptions[standardType]}`]);
+            data.push([`Steel Type: ${t.steelOptions[standardType][steelType]}`]);
+            data.push([`Test Type: ${testType === 'mechanical' ? 'Mechanical Test' : 'Chemical Analysis (Sample)'}`]);
+            data.push([]);
+            
+            if (testType === 'mechanical') {
+                // Add mechanical test results
+                data.push(['MECHANICAL TEST RESULTS']);
+                data.push([]);
+                data.push(['Property', 'Value', 'Standard', 'Status']);
+                
+                const yieldStrength = document.getElementById('yieldStrength').value;
+                const tensileStrength = document.getElementById('tensileStrength').value;
+                const elongation = document.getElementById('elongation').value;
+                
+                const standard = standards[standardType][steelType].mechanical;
+                
+                data.push([
+                    'Yield Strength (N/mm²)',
+                    yieldStrength,
+                    `Min: ${standard.yieldStrength.min}`,
+                    yieldStrength >= standard.yieldStrength.min ? 'PASS' : 'FAIL'
+                ]);
+                
+                data.push([
+                    'Tensile Strength (N/mm²)',
+                    tensileStrength,
+                    `${standard.tensileStrength.min} - ${standard.tensileStrength.max}`,
+                    (tensileStrength >= standard.tensileStrength.min && tensileStrength <= standard.tensileStrength.max) ? 'PASS' : 'FAIL'
+                ]);
+                
+                data.push([
+                    'Elongation (%)',
+                    elongation,
+                    `Min: ${standard.elongation.min}`,
+                    elongation >= standard.elongation.min ? 'PASS' : 'FAIL'
+                ]);
+                
+            } else if (testType === 'chemical') {
+                // Add chemical analysis results
+                data.push(['CHEMICAL ANALYSIS RESULTS (SAMPLE)']);
+                data.push([]);
+                data.push(['Element', 'Value (%)', 'Max Allowed (%)', 'Status']);
+                
+                const standard = standards[standardType][steelType].chemical;
+                
+                const elements = [
+                    { id: 'carbon', name: 'Carbon (C)' },
+                    { id: 'silicon', name: 'Silicon (Si)' },
+                    { id: 'manganese', name: 'Manganese (Mn)' },
+                    { id: 'phosphorus', name: 'Phosphorus (P)' },
+                    { id: 'sulfur', name: 'Sulfur (S)' },
+                    { id: 'nitrogen', name: 'Nitrogen (N)' },
+                    { id: 'aluminum', name: 'Aluminum (Al)' },
+                    { id: 'chromium', name: 'Chromium (Cr)' },
+                    { id: 'nickel', name: 'Nickel (Ni)' },
+                    { id: 'copper', name: 'Copper (Cu)' }
+                ];
+                
+                elements.forEach(element => {
+                    const value = parseFloat(document.getElementById(element.id).value);
+                    const maxAllowed = standard[element.id].max;
+                    const status = isNaN(value) ? 'N/A' : (value <= maxAllowed ? 'PASS' : 'FAIL');
+                    
+                    data.push([
+                        element.name,
+                        isNaN(value) ? '' : value,
+                        maxAllowed,
+                        status
+                    ]);
+                });
+            }
+            
+            // Add compliance result
+            data.push([]);
+            const resultElement = document.getElementById('result');
+            if (resultElement.style.display === 'block') {
+                const isCompliant = resultElement.classList.contains('pass');
+                data.push(['OVERALL COMPLIANCE:', isCompliant ? 'PASS' : 'FAIL']);
+                
+                if (!isCompliant) {
+                    data.push([]);
+                    data.push(['REASONS FOR NON-COMPLIANCE:']);
+                    const reasons = resultElement.querySelectorAll('.reasons li');
+                    reasons.forEach(reason => {
+                        data.push([reason.textContent]);
+                    });
+                }
+            }
+            
+            // Create worksheet and add to workbook
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Set column widths for better formatting
+            const colWidths = [];
+            for (let i = 0; i < data[0].length; i++) {
+                let maxLength = 0;
+                for (let j = 0; j < data.length; j++) {
+                    if (data[j][i]) {
+                        const length = data[j][i].toString().length;
+                        if (length > maxLength) maxLength = length;
+                    }
+                }
+                // Set minimum width of 10 and maximum of 50
+                colWidths.push({ wch: Math.min(Math.max(maxLength, 10), 50) });
+            }
+            ws['!cols'] = colWidths;
+            
+            // Add the worksheet to the workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Steel Analysis');
+            
+            // Export to Excel
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
